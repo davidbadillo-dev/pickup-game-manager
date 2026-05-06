@@ -1,0 +1,47 @@
+@page "/g/{id:guid}"
+@model PickupGameManager.Web.Pages.Games.DetailsModel
+@{
+    ViewData["Title"] = Model.Game!.Title;
+    var shareUrl = $"{Request.Scheme}://{Request.Host}{Url.Page("/Games/Details", values: new { id = Model.Game.Id })}";
+}
+
+<h1 class="mb-3">@Model.Game.Title</h1>
+
+<dl class="row mb-4">
+    <dt class="col-sm-3">Where</dt>
+    <dd class="col-sm-9">@Model.Game.Location</dd>
+
+    <dt class="col-sm-3">When</dt>
+    <dd class="col-sm-9">@Model.Game.ScheduledAt.ToLocalTime().ToString("f")</dd>
+
+    <dt class="col-sm-3">Max players</dt>
+    <dd class="col-sm-9">@Model.Game.MaxPlayers</dd>
+</dl>
+
+<p class="mt-4"><a asp-page="/Index">← Home</a></p>
+
+<div class="card">
+    <div class="card-body">
+        <h2 class="h6 card-title">Share this game</h2>
+        <p class="card-text small text-muted mb-2">Send players this link to open the game page.</p>
+        <div class="input-group">
+            <input type="text" class="form-control font-monospace small" readonly value="@shareUrl" id="share-url" />
+            <button type="button" class="btn btn-outline-primary" id="copy-share">Copy</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('copy-share')?.addEventListener('click', async () => {
+            const input = document.getElementById('share-url');
+            if (!input) return;
+            try {
+                await navigator.clipboard.writeText(input.value);
+            } catch {
+                input.select();
+                document.execCommand('copy');
+            }
+        });
+    </script>
+}

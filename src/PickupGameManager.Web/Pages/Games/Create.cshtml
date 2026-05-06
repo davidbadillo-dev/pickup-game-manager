@@ -1,0 +1,42 @@
+@page "/games/create"
+@model PickupGameManager.Web.Pages.Games.CreateModel
+@{
+    ViewData["Title"] = "Create game";
+}
+
+<h1 class="mb-3">Create game</h1>
+
+<form method="post" class="needs-validation" novalidate>
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="mb-3">
+        <label asp-for="Input.Title" class="form-label"></label>
+        <input asp-for="Input.Title" class="form-control" autocomplete="off" />
+        <span asp-validation-for="Input.Title" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Input.Location" class="form-label"></label>
+        <input asp-for="Input.Location" class="form-control" autocomplete="street-address" />
+        <span asp-validation-for="Input.Location" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Input.ScheduledAtLocal" class="form-label"></label>
+        <input asp-for="Input.ScheduledAtLocal" class="form-control" type="datetime-local" />
+        <span asp-validation-for="Input.ScheduledAtLocal" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Input.MaxPlayers" class="form-label"></label>
+        <input asp-for="Input.MaxPlayers" class="form-control" type="number" min="1" max="500" />
+        <span asp-validation-for="Input.MaxPlayers" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Create</button>
+    <a class="btn btn-outline-secondary ms-2" asp-page="/Index">Cancel</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
