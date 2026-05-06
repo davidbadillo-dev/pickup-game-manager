@@ -12,4 +12,6 @@ public class Game
 
     public int MaxPlayers { get; set; }
     public DateTime CreatedAt { get; set; }
+
+    public ICollection<Participant> Participants { get; set; } = new List<Participant>();
 }

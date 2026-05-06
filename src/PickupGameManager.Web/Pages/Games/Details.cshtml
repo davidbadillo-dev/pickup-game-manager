@@ -7,7 +7,7 @@
 
 <h1 class="mb-3">@Model.Game.Title</h1>
 
-<dl class="row mb-4">
+<dl class="row mb-3">
     <dt class="col-sm-3">Where</dt>
     <dd class="col-sm-9">@Model.Game.Location</dd>
 
@@ -16,7 +16,51 @@
 
     <dt class="col-sm-3">Max players</dt>
     <dd class="col-sm-9">@Model.Game.MaxPlayers</dd>
+
+    <dt class="col-sm-3">Spots remaining</dt>
+    <dd class="col-sm-9">@Model.SpotsRemaining</dd>
 </dl>
+
+<h2 class="h5">Join this game</h2>
+<form method="post" asp-page-handler="Join" class="mb-4">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="mb-2">
+        <label asp-for="Input.PlayerName" class="form-label"></label>
+        <input asp-for="Input.PlayerName" class="form-control" autocomplete="name" />
+        <span asp-validation-for="Input.PlayerName" class="text-danger"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">Join</button>
+</form>
+
+<h2 class="h5">Going (@Model.GoingCount)</h2>
+@if (Model.GoingPlayers.Count == 0)
+{
+    <p class="text-muted">No one yet.</p>
+}
+else
+{
+    <ul class="list-unstyled mb-4">
+        @foreach (var p in Model.GoingPlayers)
+        {
+            <li>@p.Name</li>
+        }
+    </ul>
+}
+
+<h2 class="h5">Waitlist (@Model.WaitlistedPlayers.Count)</h2>
+@if (Model.WaitlistedPlayers.Count == 0)
+{
+    <p class="text-muted">Nobody on the waitlist.</p>
+}
+else
+{
+    <ul class="list-unstyled mb-4">
+        @foreach (var p in Model.WaitlistedPlayers)
+        {
+            <li>@p.Name</li>
+        }
+    </ul>
+}
 
 <p class="mt-4"><a asp-page="/Index">← Home</a></p>
 
@@ -32,6 +76,7 @@
 </div>
 
 @section Scripts {
+    <partial name="_ValidationScriptsPartial" />
     <script>
         document.getElementById('copy-share')?.addEventListener('click', async () => {
             const input = document.getElementById('share-url');

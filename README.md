@@ -9,4 +9,3 @@
 - Day 5: Name persistence
 - Day 6: Reminders
 - Day 7: Deploy + test
-
