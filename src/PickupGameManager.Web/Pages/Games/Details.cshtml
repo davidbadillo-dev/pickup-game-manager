@@ -7,6 +7,11 @@
 
 <h1 class="mb-3">@Model.Game.Title</h1>
 
+@if (TempData["LeaveNotice"] is string leaveNotice && leaveNotice.Length > 0)
+{
+    <div class="alert alert-secondary py-2 mb-3" role="status">@leaveNotice</div>
+}
+
 <dl class="row mb-3">
     <dt class="col-sm-3">Where</dt>
     <dd class="col-sm-9">@Model.Game.Location</dd>
@@ -30,6 +35,15 @@
         <span asp-validation-for="Input.PlayerName" class="text-danger"></span>
     </div>
     <button type="submit" class="btn btn-primary">Join</button>
+</form>
+
+<h2 class="h5">Leave this game</h2>
+<form method="post" asp-page="/Games/Leave" asp-route-id="@Model.Game.Id" class="mb-4">
+    <div class="mb-2">
+        <label class="form-label" for="leave-player-name">Your name</label>
+        <input id="leave-player-name" name="PlayerName" class="form-control" maxlength="200" autocomplete="name" />
+    </div>
+    <button type="submit" class="btn btn-outline-secondary">Leave game</button>
 </form>
 
 <h2 class="h5">Going (@Model.GoingCount)</h2>
