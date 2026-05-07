@@ -1,6 +1,6 @@
 # Code map — Pickup Game Manager
 
-Quick reference for navigating the repository. Behavior is described as implemented today (Days 1–3: create/view/join/leave; waitlist auto-promotion when a **Going** player leaves; no duplicate-name enforcement).
+Quick reference for navigating the repository. Behavior is described as implemented today (Days 1–4: create/view/join/leave; waitlist auto-promotion when a **Going** player leaves; UI-level duplicate-name prevention on join; localStorage name autofill/save; mobile-first details layout polish).
 
 ## Main folders and files
 
@@ -35,14 +35,23 @@ Quick reference for navigating the repository. Behavior is described as implemen
 1. **GET** `/g/{id}` where `{id}` is a `Guid` — `@page "/g/{id:guid}"` in `Pages/Games/Details.cshtml`.
 2. `DetailsModel.OnGetAsync(Guid id, …)` (`Pages/Games/Details.cshtml.cs`) loads `Game` with **`Include(g => g.Participants)`**, **`AsNoTracking()`**.
 3. If missing → `NotFound()`; otherwise `PopulateLists(Game)` sets `GoingCount`, `SpotsRemaining`, `GoingPlayers`, `WaitlistedPlayers`, then `Page()` renders the view.
-4. Optional **`TempData["LeaveNotice"]`** (set after leave attempts) renders as a short status message at the top.
+4. Optional status messages render at top of page via **`TempData`**:
+   - **`LeaveNotice`** after leave attempts.
+   - **`JoinNotice`** after successful join (`Your status: Going` or `Your status: Waitlist`).
+5. Client-side script in `Details.cshtml`:
+   - Reads saved player name from **`localStorage`** key **`pickupGameManager.playerName`**.
+   - Auto-fills join/leave name inputs when empty.
+   - Saves trimmed player name on blur/submit from join/leave forms.
 
 ## Request flow: join a game
 
 1. User submits the **Join** form on `/g/{id}` → **POST** with `handler=Join` (`asp-page-handler="Join"` in `Details.cshtml`).
 2. `DetailsModel.OnPostJoinAsync(Guid id, …)` loads **`MaxPlayers`** via **`AsNoTracking`**. **`Going`** count uses **`db.Participants.CountAsync`** (`Status == Going`).
 3. **`Input.PlayerName`** trimmed; empty/whitespace → **`ModelState`** error and re-render.
-4. **`db.Participants.Add(...)`** with **`GameId = id`**; **`SaveChangesAsync`**; redirect **`/g/{id}`**.
+4. UI-level duplicate check before insert: **`AnyAsync`** by **`GameId` + case-insensitive name**; duplicate → `ModelState` error and re-render (no DB uniqueness constraint yet).
+5. Non-duplicate: **`db.Participants.Add(...)`** with **`GameId = id`** and computed status (`Going`/`Waitlist`); **`SaveChangesAsync`**.
+6. Sets **`TempData["JoinNotice"]`** to show resulting status after PRG redirect.
+7. Redirects to **`/g/{id}`**.
 
 ## Request flow: leave a game
 
@@ -81,15 +90,17 @@ When the leaving player was **Waitlist**, only **delete** — **no** promotion (
 - **Share URL:** **`/g/{gameId}`** for viewing/joining; **leave** uses **`/games/{id}/leave`** POST only from the details page form.
 - **Join POST:** avoids tracked **`Game`** parent (insert **`Participant`** only).
 - **Leave POST:** one tracked **`roster`** list so promotion updates an instance EF is already tracking.
-- **Spots remaining:** **`Math.Max(0, MaxPlayers - GoingCount)`** on display.
+- **Spots display:** details page now shows both **`GoingCount / MaxPlayers`** and friendly remaining label (`1 spot left`, `N spots left`).
+- **Name persistence:** browser-only via **`localStorage["pickupGameManager.playerName"]`** (join/leave forms).
+- **Duplicate joins:** UI-level prevention only in join handler; DB schema unchanged.
 - **Auth:** none.
 
 ## Where to add future features
 
 | Idea | Where |
 |------|--------|
-| **Duplicate-name prevention**, unique **`(GameId, Name)`** | **`AppDbContext`** index + join/leave validation |
-| **localStorage** display name | **`Details.cshtml`** scripts / **`site.js`** |
+| **Backend duplicate-name enforcement**, unique **`(GameId, Name)`** | **`AppDbContext`** index + migration + join/leave handling |
+| **Global/localStorage abstraction** | optional move from `Details.cshtml` inline script to **`wwwroot/js/site.js`** |
 | **Polish / reminders / deploy** | per **`TODO.md`** / **`PROJECT_CONTEXT.md`** |
 
 **Avoid** changing **`Program.cs`** unless adding new hosting features.

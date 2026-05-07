@@ -3,95 +3,171 @@
 @{
     ViewData["Title"] = Model.Game!.Title;
     var shareUrl = $"{Request.Scheme}://{Request.Host}{Url.Page("/Games/Details", values: new { id = Model.Game.Id })}";
+    var spotsLeftLabel = Model.SpotsRemaining == 1 ? "1 spot left" : $"{Model.SpotsRemaining} spots left";
 }
 
-<h1 class="mb-3">@Model.Game.Title</h1>
+<div class="game-details-page">
+    <h1 class="mb-2">@Model.Game.Title</h1>
 
-@if (TempData["LeaveNotice"] is string leaveNotice && leaveNotice.Length > 0)
-{
-    <div class="alert alert-secondary py-2 mb-3" role="status">@leaveNotice</div>
-}
+    @if (TempData["JoinNotice"] is string joinNotice && joinNotice.Length > 0)
+    {
+        <div class="alert alert-success py-2 mb-3" role="status">@joinNotice</div>
+    }
 
-<dl class="row mb-3">
-    <dt class="col-sm-3">Where</dt>
-    <dd class="col-sm-9">@Model.Game.Location</dd>
+    @if (TempData["LeaveNotice"] is string leaveNotice && leaveNotice.Length > 0)
+    {
+        <div class="alert alert-secondary py-2 mb-3" role="status">@leaveNotice</div>
+    }
 
-    <dt class="col-sm-3">When</dt>
-    <dd class="col-sm-9">@Model.Game.ScheduledAt.ToLocalTime().ToString("f")</dd>
+    <div class="card mb-3">
+        <div class="card-body py-3">
+            <dl class="row mb-0">
+                <dt class="col-4 col-sm-3">Where</dt>
+                <dd class="col-8 col-sm-9">@Model.Game.Location</dd>
 
-    <dt class="col-sm-3">Max players</dt>
-    <dd class="col-sm-9">@Model.Game.MaxPlayers</dd>
+                <dt class="col-4 col-sm-3">When</dt>
+                <dd class="col-8 col-sm-9">@Model.Game.ScheduledAt.ToLocalTime().ToString("f")</dd>
 
-    <dt class="col-sm-3">Spots remaining</dt>
-    <dd class="col-sm-9">@Model.SpotsRemaining</dd>
-</dl>
+                <dt class="col-4 col-sm-3">Players</dt>
+                <dd class="col-8 col-sm-9">@Model.GoingCount / @Model.Game.MaxPlayers</dd>
 
-<h2 class="h5">Join this game</h2>
-<form method="post" asp-page-handler="Join" class="mb-4">
-    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-    <div class="mb-2">
-        <label asp-for="Input.PlayerName" class="form-label"></label>
-        <input asp-for="Input.PlayerName" class="form-control" autocomplete="name" />
-        <span asp-validation-for="Input.PlayerName" class="text-danger"></span>
-    </div>
-    <button type="submit" class="btn btn-primary">Join</button>
-</form>
-
-<h2 class="h5">Leave this game</h2>
-<form method="post" asp-page="/Games/Leave" asp-route-id="@Model.Game.Id" class="mb-4">
-    <div class="mb-2">
-        <label class="form-label" for="leave-player-name">Your name</label>
-        <input id="leave-player-name" name="PlayerName" class="form-control" maxlength="200" autocomplete="name" />
-    </div>
-    <button type="submit" class="btn btn-outline-secondary">Leave game</button>
-</form>
-
-<h2 class="h5">Going (@Model.GoingCount)</h2>
-@if (Model.GoingPlayers.Count == 0)
-{
-    <p class="text-muted">No one yet.</p>
-}
-else
-{
-    <ul class="list-unstyled mb-4">
-        @foreach (var p in Model.GoingPlayers)
-        {
-            <li>@p.Name</li>
-        }
-    </ul>
-}
-
-<h2 class="h5">Waitlist (@Model.WaitlistedPlayers.Count)</h2>
-@if (Model.WaitlistedPlayers.Count == 0)
-{
-    <p class="text-muted">Nobody on the waitlist.</p>
-}
-else
-{
-    <ul class="list-unstyled mb-4">
-        @foreach (var p in Model.WaitlistedPlayers)
-        {
-            <li>@p.Name</li>
-        }
-    </ul>
-}
-
-<p class="mt-4"><a asp-page="/Index">← Home</a></p>
-
-<div class="card">
-    <div class="card-body">
-        <h2 class="h6 card-title">Share this game</h2>
-        <p class="card-text small text-muted mb-2">Send players this link to open the game page.</p>
-        <div class="input-group">
-            <input type="text" class="form-control font-monospace small" readonly value="@shareUrl" id="share-url" />
-            <button type="button" class="btn btn-outline-primary" id="copy-share">Copy</button>
+                <dt class="col-4 col-sm-3">Spots</dt>
+                <dd class="col-8 col-sm-9">@spotsLeftLabel</dd>
+            </dl>
         </div>
     </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-lg-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h2 class="h5">Join this game</h2>
+                    <form method="post" asp-page-handler="Join" class="mb-0" id="join-form">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                        <div class="mb-2">
+                            <label asp-for="Input.PlayerName" class="form-label"></label>
+                            <input asp-for="Input.PlayerName" class="form-control" autocomplete="name" id="join-player-name" />
+                            <span asp-validation-for="Input.PlayerName" class="text-danger"></span>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Join</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h2 class="h5">Leave this game</h2>
+                    <form method="post" asp-page="/Games/Leave" asp-route-id="@Model.Game.Id" class="mb-0" id="leave-form">
+                        <div class="mb-2">
+                            <label class="form-label" for="leave-player-name">Your name</label>
+                            <input id="leave-player-name" name="PlayerName" class="form-control" maxlength="200" autocomplete="name" />
+                        </div>
+                        <button type="submit" class="btn btn-outline-secondary">Leave game</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-12 col-md-6">
+            <section class="card h-100 roster-card roster-card-going">
+                <div class="card-body">
+                    <h2 class="h5 mb-2">Going (@Model.GoingCount)</h2>
+                    @if (Model.GoingPlayers.Count == 0)
+                    {
+                        <p class="text-muted mb-0">No one yet.</p>
+                    }
+                    else
+                    {
+                        <ul class="list-unstyled mb-0">
+                            @foreach (var p in Model.GoingPlayers)
+                            {
+                                <li class="py-1 border-bottom">@p.Name</li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </section>
+        </div>
+        <div class="col-12 col-md-6">
+            <section class="card h-100 roster-card roster-card-waitlist">
+                <div class="card-body">
+                    <h2 class="h5 mb-2">Waitlist (@Model.WaitlistedPlayers.Count)</h2>
+                    @if (Model.WaitlistedPlayers.Count == 0)
+                    {
+                        <p class="text-muted mb-0">Nobody on the waitlist.</p>
+                    }
+                    else
+                    {
+                        <ul class="list-unstyled mb-0">
+                            @foreach (var p in Model.WaitlistedPlayers)
+                            {
+                                <li class="py-1 border-bottom">@p.Name</li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h2 class="h6 card-title">Share this game</h2>
+            <p class="card-text small text-muted mb-2">Send players this link to open the game page.</p>
+            <div class="input-group">
+                <input type="text" class="form-control font-monospace small" readonly value="@shareUrl" id="share-url" />
+                <button type="button" class="btn btn-outline-primary" id="copy-share">Copy</button>
+            </div>
+        </div>
+    </div>
+
+    <p class="mb-0"><a asp-page="/Index">← Home</a></p>
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
+        const playerNameStorageKey = 'pickupGameManager.playerName';
+        const joinInput = document.getElementById('join-player-name');
+        const leaveInput = document.getElementById('leave-player-name');
+        const joinForm = document.getElementById('join-form');
+        const leaveForm = document.getElementById('leave-form');
+
+        const getSavedPlayerName = () => {
+            try {
+                return localStorage.getItem(playerNameStorageKey) || '';
+            } catch {
+                return '';
+            }
+        };
+
+        const savePlayerName = (value) => {
+            const trimmed = value.trim();
+            if (!trimmed) return;
+            try {
+                localStorage.setItem(playerNameStorageKey, trimmed);
+            } catch {
+                // Ignore browsers that block storage in privacy modes.
+            }
+        };
+
+        const savedPlayerName = getSavedPlayerName();
+        if (joinInput && !joinInput.value.trim() && savedPlayerName) {
+            joinInput.value = savedPlayerName;
+        }
+
+        if (leaveInput && !leaveInput.value.trim() && savedPlayerName) {
+            leaveInput.value = savedPlayerName;
+        }
+
+        joinInput?.addEventListener('blur', () => savePlayerName(joinInput.value));
+        leaveInput?.addEventListener('blur', () => savePlayerName(leaveInput.value));
+        joinForm?.addEventListener('submit', () => savePlayerName(joinInput?.value ?? ''));
+        leaveForm?.addEventListener('submit', () => savePlayerName(leaveInput?.value ?? ''));
+
         document.getElementById('copy-share')?.addEventListener('click', async () => {
             const input = document.getElementById('share-url');
             if (!input) return;

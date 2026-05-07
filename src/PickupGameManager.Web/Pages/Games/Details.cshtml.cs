@@ -48,6 +48,18 @@ public class DetailsModel(AppDbContext db) : PageModel
             return Page();
         }
 
+        var normalizedName = Input.PlayerName.ToLower();
+        var alreadyJoined = await db.Participants.AnyAsync(
+            p => p.GameId == id && p.Name.ToLower() == normalizedName,
+            cancellationToken);
+
+        if (alreadyJoined)
+        {
+            ModelState.AddModelError(string.Empty, "You already joined this game with that name.");
+            await LoadDisplayAsync(id, cancellationToken);
+            return Page();
+        }
+
         var goingCount = await db.Participants.CountAsync(
             p => p.GameId == id && p.Status == ParticipantStatus.Going,
             cancellationToken);
@@ -64,6 +76,7 @@ public class DetailsModel(AppDbContext db) : PageModel
         });
 
         await db.SaveChangesAsync(cancellationToken);
+        TempData["JoinNotice"] = $"Your status: {(status == ParticipantStatus.Going ? "Going" : "Waitlist")}";
 
         return RedirectToPage("/Games/Details", new { id });
     }
