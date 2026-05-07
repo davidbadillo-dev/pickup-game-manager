@@ -4,19 +4,20 @@
     ViewData["Title"] = Model.Game!.Title;
     var shareUrl = $"{Request.Scheme}://{Request.Host}{Url.Page("/Games/Details", values: new { id = Model.Game.Id })}";
     var spotsLeftLabel = Model.SpotsRemaining == 1 ? "1 spot left" : $"{Model.SpotsRemaining} spots left";
+    var goingNamesJson = System.Text.Json.JsonSerializer.Serialize(Model.GoingPlayers.Select(p => p.Name));
+    var waitlistNamesJson = System.Text.Json.JsonSerializer.Serialize(Model.WaitlistedPlayers.Select(p => p.Name));
 }
 
 <div class="game-details-page">
     <h1 class="mb-2">@Model.Game.Title</h1>
 
-    @if (TempData["JoinNotice"] is string joinNotice && joinNotice.Length > 0)
-    {
-        <div class="alert alert-success py-2 mb-3" role="status">@joinNotice</div>
-    }
+    <div id="player-status-alert" class="alert alert-success py-2 mb-3 d-none" role="status"></div>
+    <p id="player-status-hint" class="text-muted small mb-3 d-none">You are not joined yet.</p>
 
     @if (TempData["LeaveNotice"] is string leaveNotice && leaveNotice.Length > 0)
     {
-        <div class="alert alert-secondary py-2 mb-3" role="status">@leaveNotice</div>
+        var leaveNoticeName = TempData["LeaveNoticeName"] as string ?? string.Empty;
+        <div class="alert alert-secondary py-2 mb-3" role="status" id="leave-notice" data-notice-name="@leaveNoticeName">@leaveNotice</div>
     }
 
     <div class="card mb-3">
@@ -49,7 +50,7 @@
                             <input asp-for="Input.PlayerName" class="form-control" autocomplete="name" id="join-player-name" />
                             <span asp-validation-for="Input.PlayerName" class="text-danger"></span>
                         </div>
-                        <button type="submit" class="btn btn-primary">Join</button>
+                        <button type="submit" class="btn btn-primary" id="join-button">Join</button>
                     </form>
                 </div>
             </div>
@@ -63,7 +64,7 @@
                             <label class="form-label" for="leave-player-name">Your name</label>
                             <input id="leave-player-name" name="PlayerName" class="form-control" maxlength="200" autocomplete="name" />
                         </div>
-                        <button type="submit" class="btn btn-outline-secondary">Leave game</button>
+                        <button type="submit" class="btn btn-outline-secondary" id="leave-button">Leave game</button>
                     </form>
                 </div>
             </div>
@@ -135,6 +136,13 @@
         const leaveInput = document.getElementById('leave-player-name');
         const joinForm = document.getElementById('join-form');
         const leaveForm = document.getElementById('leave-form');
+        const joinButton = document.getElementById('join-button');
+        const leaveButton = document.getElementById('leave-button');
+        const playerStatusAlert = document.getElementById('player-status-alert');
+        const playerStatusHint = document.getElementById('player-status-hint');
+        const leaveNotice = document.getElementById('leave-notice');
+        const goingNames = @Html.Raw(goingNamesJson);
+        const waitlistNames = @Html.Raw(waitlistNamesJson);
 
         const getSavedPlayerName = () => {
             try {
@@ -154,6 +162,63 @@
             }
         };
 
+        const normalize = (value) => value.trim().toLowerCase();
+
+        const computeStatus = (name) => {
+            const normalized = normalize(name);
+            if (!normalized) return null;
+
+            if (goingNames.some(n => normalize(n) === normalized)) {
+                return 'Going';
+            }
+
+            if (waitlistNames.some(n => normalize(n) === normalized)) {
+                return 'Waitlist';
+            }
+
+            return null;
+        };
+
+        const renderStatus = (status) => {
+            const currentName = joinInput?.value ?? '';
+            const leaveNoticeName = leaveNotice?.dataset.noticeName ?? '';
+
+            if (leaveNotice) {
+                const noticeTargetsCurrentName = leaveNoticeName
+                    ? normalize(leaveNoticeName) === normalize(currentName)
+                    : !normalize(currentName);
+                leaveNotice.classList.toggle('d-none', !noticeTargetsCurrentName);
+            }
+
+            if (status) {
+                if (playerStatusAlert) {
+                    playerStatusAlert.textContent = `Your status: ${status}`;
+                    playerStatusAlert.classList.remove('d-none');
+                }
+
+                playerStatusHint?.classList.add('d-none');
+                if (joinButton) joinButton.disabled = true;
+                if (leaveButton) leaveButton.disabled = false;
+                return;
+            }
+
+            playerStatusAlert?.classList.add('d-none');
+            playerStatusHint?.classList.remove('d-none');
+            if (joinButton) joinButton.disabled = false;
+            if (leaveButton) leaveButton.disabled = true;
+        };
+
+        const syncNameAndStatus = () => {
+            const currentName = joinInput?.value ?? '';
+            if (leaveInput) {
+                leaveInput.value = currentName;
+            }
+
+            const status = computeStatus(currentName);
+            renderStatus(status);
+            savePlayerName(currentName);
+        };
+
         const savedPlayerName = getSavedPlayerName();
         if (joinInput && !joinInput.value.trim() && savedPlayerName) {
             joinInput.value = savedPlayerName;
@@ -163,10 +228,28 @@
             leaveInput.value = savedPlayerName;
         }
 
-        joinInput?.addEventListener('blur', () => savePlayerName(joinInput.value));
-        leaveInput?.addEventListener('blur', () => savePlayerName(leaveInput.value));
+        joinInput?.addEventListener('input', () => {
+            if (leaveInput) {
+                leaveInput.value = joinInput.value;
+            }
+
+            const status = computeStatus(joinInput.value);
+            renderStatus(status);
+        });
+
+        joinInput?.addEventListener('blur', () => syncNameAndStatus());
+        leaveInput?.addEventListener('input', () => {
+            if (joinInput) {
+                joinInput.value = leaveInput.value;
+            }
+
+            const status = computeStatus(leaveInput.value);
+            renderStatus(status);
+        });
+        leaveInput?.addEventListener('blur', () => syncNameAndStatus());
         joinForm?.addEventListener('submit', () => savePlayerName(joinInput?.value ?? ''));
         leaveForm?.addEventListener('submit', () => savePlayerName(leaveInput?.value ?? ''));
+        syncNameAndStatus();
 
         document.getElementById('copy-share')?.addEventListener('click', async () => {
             const input = document.getElementById('share-url');

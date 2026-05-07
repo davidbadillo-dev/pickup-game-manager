@@ -41,6 +41,11 @@ Quick reference for navigating the repository. Behavior is described as implemen
 5. Client-side script in `Details.cshtml`:
    - Reads saved player name from **`localStorage`** key **`pickupGameManager.playerName`**.
    - Auto-fills join/leave name inputs when empty.
+   - Compares current input name against server-rendered **Going** and **Waitlist** rosters (case-insensitive).
+   - Derives and renders live status (`Your status: Going` / `Your status: Waitlist`) on initial load and on name input changes.
+   - Toggles action states based on derived status:
+     - Joined: **Join disabled**, **Leave enabled**.
+     - Not joined: status hidden, **Join enabled**, **Leave disabled** with hint text.
    - Saves trimmed player name on blur/submit from join/leave forms.
 
 ## Request flow: join a game
@@ -91,7 +96,7 @@ When the leaving player was **Waitlist**, only **delete** — **no** promotion (
 - **Join POST:** avoids tracked **`Game`** parent (insert **`Participant`** only).
 - **Leave POST:** one tracked **`roster`** list so promotion updates an instance EF is already tracking.
 - **Spots display:** details page now shows both **`GoingCount / MaxPlayers`** and friendly remaining label (`1 spot left`, `N spots left`).
-- **Name persistence:** browser-only via **`localStorage["pickupGameManager.playerName"]`** (join/leave forms).
+- **Name persistence + identity UX:** browser-only via **`localStorage["pickupGameManager.playerName"]`** and roster matching on details page.
 - **Duplicate joins:** UI-level prevention only in join handler; DB schema unchanged.
 - **Auth:** none.
 

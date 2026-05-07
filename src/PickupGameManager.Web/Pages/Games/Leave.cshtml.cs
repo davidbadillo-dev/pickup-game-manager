@@ -24,6 +24,7 @@ public class LeaveModel(AppDbContext db) : PageModel
         if (string.IsNullOrWhiteSpace(PlayerName))
         {
             TempData["LeaveNotice"] = "Enter your name to leave.";
+            TempData["LeaveNoticeName"] = string.Empty;
             return RedirectToPage("/Games/Details", new { id });
         }
 
@@ -37,6 +38,7 @@ public class LeaveModel(AppDbContext db) : PageModel
         if (participant is null)
         {
             TempData["LeaveNotice"] = "No one with that name is on this game.";
+            TempData["LeaveNoticeName"] = PlayerName;
             return RedirectToPage("/Games/Details", new { id });
         }
 
@@ -59,6 +61,7 @@ public class LeaveModel(AppDbContext db) : PageModel
         await db.SaveChangesAsync(cancellationToken);
 
         TempData["LeaveNotice"] = "You've left the game.";
+        TempData["LeaveNoticeName"] = PlayerName;
         return RedirectToPage("/Games/Details", new { id });
     }
 }
