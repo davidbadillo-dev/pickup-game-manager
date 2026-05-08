@@ -25,20 +25,20 @@
 
 ## Day 4 — UX Optimization
 
-- [ ] Mobile-first layout
-- [ ] Show “Your status: Going / Waitlist”
-- [ ] Store player name in localStorage
-- [ ] Auto-fill name input from localStorage
-- [ ] Prevent duplicate joins at UI level
-- [ ] Improve spots display
-- [ ] Improve Going / Waitlist visual separation
+- [x] Mobile-first layout
+- [x] Show “Your status: Going / Waitlist”
+- [x] Store player name in localStorage
+- [x] Auto-fill name input from localStorage
+- [x] Prevent duplicate joins at UI level
+- [x] Improve spots display
+- [x] Improve Going / Waitlist visual separation
 
 ## Day 5 — Identity Lite
 
-- [ ] Refine name handling
-- [ ] Add edit-name flow if needed
-- [ ] Handle duplicate names more gracefully
-- [ ] Improve empty/error states
+- [x] Refine name handling
+- [x] Add edit-name flow if needed
+- [x] Handle duplicate names more gracefully
+- [x] Improve empty/error states
 
 ## Day 6 — Organizer Convenience
 

@@ -11,8 +11,21 @@
 <div class="game-details-page">
     <h1 class="mb-2">@Model.Game.Title</h1>
 
-    <div id="player-status-alert" class="alert alert-success py-2 mb-3 d-none" role="status"></div>
-    <p id="player-status-hint" class="text-muted small mb-3 d-none">You are not joined yet.</p>
+    <div class="card mb-3 identity-status-banner">
+        <div class="card-body py-3 d-flex flex-column flex-sm-row gap-3 justify-content-between align-items-start align-items-sm-center">
+            <div class="d-flex gap-2 align-items-start">
+                <span class="identity-status-icon" aria-hidden="true">👤</span>
+                <div>
+                    <p id="identity-status-main" class="mb-1 fw-semibold">You are unnamed player — Not joined yet</p>
+                    <p id="identity-status-helper" class="mb-0 small text-muted">Enter your name to continue.</p>
+                </div>
+            </div>
+            <div class="text-sm-end">
+                <p class="mb-2 small text-muted">@Model.GoingCount / @Model.Game.MaxPlayers players • @Model.SpotsRemaining spots left</p>
+                <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="use-different-name">Use different name</button>
+            </div>
+        </div>
+    </div>
 
     @if (TempData["LeaveNotice"] is string leaveNotice && leaveNotice.Length > 0)
     {
@@ -78,7 +91,7 @@
                     <h2 class="h5 mb-2">Going (@Model.GoingCount)</h2>
                     @if (Model.GoingPlayers.Count == 0)
                     {
-                        <p class="text-muted mb-0">No one yet.</p>
+                        <p class="text-muted mb-0">No players going yet.</p>
                     }
                     else
                     {
@@ -98,7 +111,7 @@
                     <h2 class="h5 mb-2">Waitlist (@Model.WaitlistedPlayers.Count)</h2>
                     @if (Model.WaitlistedPlayers.Count == 0)
                     {
-                        <p class="text-muted mb-0">Nobody on the waitlist.</p>
+                        <p class="text-muted mb-0">No one on the waitlist yet.</p>
                     }
                     else
                     {
@@ -138,8 +151,9 @@
         const leaveForm = document.getElementById('leave-form');
         const joinButton = document.getElementById('join-button');
         const leaveButton = document.getElementById('leave-button');
-        const playerStatusAlert = document.getElementById('player-status-alert');
-        const playerStatusHint = document.getElementById('player-status-hint');
+        const useDifferentNameButton = document.getElementById('use-different-name');
+        const identityStatusMain = document.getElementById('identity-status-main');
+        const identityStatusHelper = document.getElementById('identity-status-helper');
         const leaveNotice = document.getElementById('leave-notice');
         const goingNames = @Html.Raw(goingNamesJson);
         const waitlistNames = @Html.Raw(waitlistNamesJson);
@@ -154,9 +168,12 @@
 
         const savePlayerName = (value) => {
             const trimmed = value.trim();
-            if (!trimmed) return;
             try {
-                localStorage.setItem(playerNameStorageKey, trimmed);
+                if (trimmed) {
+                    localStorage.setItem(playerNameStorageKey, trimmed);
+                } else {
+                    localStorage.removeItem(playerNameStorageKey);
+                }
             } catch {
                 // Ignore browsers that block storage in privacy modes.
             }
@@ -166,7 +183,7 @@
 
         const computeStatus = (name) => {
             const normalized = normalize(name);
-            if (!normalized) return null;
+            if (!normalized) return 'Not joined yet';
 
             if (goingNames.some(n => normalize(n) === normalized)) {
                 return 'Going';
@@ -176,46 +193,66 @@
                 return 'Waitlist';
             }
 
-            return null;
+            return 'Not joined yet';
         };
 
-        const renderStatus = (status) => {
-            const currentName = joinInput?.value ?? '';
+        const renderStatus = (status, currentName) => {
+            const trimmedName = currentName.trim();
             const leaveNoticeName = leaveNotice?.dataset.noticeName ?? '';
 
             if (leaveNotice) {
                 const noticeTargetsCurrentName = leaveNoticeName
-                    ? normalize(leaveNoticeName) === normalize(currentName)
-                    : !normalize(currentName);
+                    ? normalize(leaveNoticeName) === normalize(trimmedName)
+                    : !normalize(trimmedName);
                 leaveNotice.classList.toggle('d-none', !noticeTargetsCurrentName);
             }
 
-            if (status) {
-                if (playerStatusAlert) {
-                    playerStatusAlert.textContent = `Your status: ${status}`;
-                    playerStatusAlert.classList.remove('d-none');
-                }
+            const displayName = trimmedName || 'unnamed player';
+            if (identityStatusMain) {
+                identityStatusMain.textContent = `You are ${displayName} — ${status}`;
+            }
 
-                playerStatusHint?.classList.add('d-none');
+            if (status === 'Going') {
+                if (identityStatusHelper) {
+                    identityStatusHelper.textContent = "You're in! See you there.";
+                }
+                useDifferentNameButton?.classList.remove('d-none');
                 if (joinButton) joinButton.disabled = true;
                 if (leaveButton) leaveButton.disabled = false;
                 return;
             }
 
-            playerStatusAlert?.classList.add('d-none');
-            playerStatusHint?.classList.remove('d-none');
-            if (joinButton) joinButton.disabled = false;
+            if (status === 'Waitlist') {
+                if (identityStatusHelper) {
+                    identityStatusHelper.textContent = "You're on the waitlist. You'll be promoted if a spot opens up.";
+                }
+                useDifferentNameButton?.classList.remove('d-none');
+                if (joinButton) joinButton.disabled = true;
+                if (leaveButton) leaveButton.disabled = false;
+                return;
+            }
+
+            if (identityStatusHelper) {
+                identityStatusHelper.textContent = trimmedName
+                    ? 'Enter a different name to join as someone else.'
+                    : 'Enter your name to continue.';
+            }
+            useDifferentNameButton?.classList.add('d-none');
+            if (joinButton) joinButton.disabled = !trimmedName;
             if (leaveButton) leaveButton.disabled = true;
         };
 
         const syncNameAndStatus = () => {
-            const currentName = joinInput?.value ?? '';
+            const currentName = (joinInput?.value ?? '').trim();
+            if (joinInput) {
+                joinInput.value = currentName;
+            }
             if (leaveInput) {
                 leaveInput.value = currentName;
             }
 
             const status = computeStatus(currentName);
-            renderStatus(status);
+            renderStatus(status, currentName);
             savePlayerName(currentName);
         };
 
@@ -234,7 +271,7 @@
             }
 
             const status = computeStatus(joinInput.value);
-            renderStatus(status);
+            renderStatus(status, joinInput.value);
         });
 
         joinInput?.addEventListener('blur', () => syncNameAndStatus());
@@ -244,11 +281,24 @@
             }
 
             const status = computeStatus(leaveInput.value);
-            renderStatus(status);
+            renderStatus(status, leaveInput.value);
         });
         leaveInput?.addEventListener('blur', () => syncNameAndStatus());
         joinForm?.addEventListener('submit', () => savePlayerName(joinInput?.value ?? ''));
         leaveForm?.addEventListener('submit', () => savePlayerName(leaveInput?.value ?? ''));
+        useDifferentNameButton?.addEventListener('click', () => {
+            if (joinInput) {
+                joinInput.value = '';
+                joinInput.focus();
+            }
+
+            if (leaveInput) {
+                leaveInput.value = '';
+            }
+
+            savePlayerName('');
+            renderStatus('Not joined yet', '');
+        });
         syncNameAndStatus();
 
         document.getElementById('copy-share')?.addEventListener('click', async () => {

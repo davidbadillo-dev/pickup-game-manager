@@ -33,7 +33,7 @@ public class LeaveModel(AppDbContext db) : PageModel
             .ToListAsync(cancellationToken);
 
         var participant = roster.FirstOrDefault(p =>
-            string.Equals(p.Name, PlayerName, StringComparison.OrdinalIgnoreCase));
+            string.Equals((p.Name ?? string.Empty).Trim(), PlayerName, StringComparison.OrdinalIgnoreCase));
 
         if (participant is null)
         {

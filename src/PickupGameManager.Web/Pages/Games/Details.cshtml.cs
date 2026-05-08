@@ -48,9 +48,9 @@ public class DetailsModel(AppDbContext db) : PageModel
             return Page();
         }
 
-        var normalizedName = Input.PlayerName.ToLower();
+        var normalizedName = Input.PlayerName.Trim().ToLowerInvariant();
         var alreadyJoined = await db.Participants.AnyAsync(
-            p => p.GameId == id && p.Name.ToLower() == normalizedName,
+            p => p.GameId == id && p.Name.Trim().ToLower() == normalizedName,
             cancellationToken);
 
         if (alreadyJoined)

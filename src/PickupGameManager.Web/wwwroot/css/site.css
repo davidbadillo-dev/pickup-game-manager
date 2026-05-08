@@ -25,6 +25,14 @@ body {
   border-radius: 0.5rem;
 }
 
+.game-details-page .identity-status-banner {
+  border-left: 0.3rem solid #0d6efd;
+}
+
+.game-details-page .identity-status-icon {
+  line-height: 1;
+}
+
 .game-details-page .roster-card-going {
   border-top: 0.3rem solid #198754;
 }

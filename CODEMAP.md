@@ -1,6 +1,6 @@
 # Code map — Pickup Game Manager
 
-Quick reference for navigating the repository. Behavior is described as implemented today (Days 1–4: create/view/join/leave; waitlist auto-promotion when a **Going** player leaves; UI-level duplicate-name prevention on join; localStorage name autofill/save; mobile-first details layout polish).
+Quick reference for navigating the repository. Behavior is described as implemented today (Days 1–5: create/view/join/leave; waitlist auto-promotion when a **Going** player leaves; UI-level duplicate-name prevention on join; localStorage name autofill/save; identity-lite UX refinements; mobile-first details layout polish).
 
 ## Main folders and files
 
@@ -38,22 +38,31 @@ Quick reference for navigating the repository. Behavior is described as implemen
 4. Optional status messages render at top of page via **`TempData`**:
    - **`LeaveNotice`** after leave attempts.
    - **`JoinNotice`** after successful join (`Your status: Going` or `Your status: Waitlist`).
-5. Client-side script in `Details.cshtml`:
+5. Top-of-page identity/status banner in `Details.cshtml` is always visible:
+   - Main line combines identity + status: **`You are {Name} — Going|Waitlist|Not joined yet`**.
+   - Helper line is contextual to current computed status.
+   - Right side shows compact roster summary: **`{GoingCount} / {MaxPlayers} players • {SpotsRemaining} spots left`**.
+6. Client-side script in `Details.cshtml`:
    - Reads saved player name from **`localStorage`** key **`pickupGameManager.playerName`**.
    - Auto-fills join/leave name inputs when empty.
    - Compares current input name against server-rendered **Going** and **Waitlist** rosters (case-insensitive).
-   - Derives and renders live status (`Your status: Going` / `Your status: Waitlist`) on initial load and on name input changes.
+   - Derives and renders status on initial load and on name input changes:
+     - **`Going`** when name exists in Going roster.
+     - **`Waitlist`** when name exists in Waitlist roster.
+     - **`Not joined yet`** when name does not exist in roster (including blank).
    - Toggles action states based on derived status:
-     - Joined: **Join disabled**, **Leave enabled**.
-     - Not joined: status hidden, **Join enabled**, **Leave disabled** with hint text.
-   - Saves trimmed player name on blur/submit from join/leave forms.
+     - Joined: **Join disabled**, **Leave enabled**, shows **Use different name** action.
+     - Not joined: **Join enabled** when name is non-empty, **Leave disabled**.
+     - Blank name: **Join disabled**, **Leave disabled**.
+   - Saves trimmed player name on blur/submit from join/leave forms; removes storage entry when name is cleared.
+   - Scoped leave notice visibility to the current computed name (prevents stale notices for another typed identity).
 
 ## Request flow: join a game
 
 1. User submits the **Join** form on `/g/{id}` → **POST** with `handler=Join` (`asp-page-handler="Join"` in `Details.cshtml`).
 2. `DetailsModel.OnPostJoinAsync(Guid id, …)` loads **`MaxPlayers`** via **`AsNoTracking`**. **`Going`** count uses **`db.Participants.CountAsync`** (`Status == Going`).
 3. **`Input.PlayerName`** trimmed; empty/whitespace → **`ModelState`** error and re-render.
-4. UI-level duplicate check before insert: **`AnyAsync`** by **`GameId` + case-insensitive name**; duplicate → `ModelState` error and re-render (no DB uniqueness constraint yet).
+4. UI-level duplicate check before insert: **`AnyAsync`** by **`GameId` + trimmed case-insensitive name**; duplicate → `ModelState` error and re-render (no DB uniqueness constraint yet).
 5. Non-duplicate: **`db.Participants.Add(...)`** with **`GameId = id`** and computed status (`Going`/`Waitlist`); **`SaveChangesAsync`**.
 6. Sets **`TempData["JoinNotice"]`** to show resulting status after PRG redirect.
 7. Redirects to **`/g/{id}`**.
@@ -63,7 +72,7 @@ Quick reference for navigating the repository. Behavior is described as implemen
 1. User submits **Leave** from the game page → **POST** **`/games/{id}/leave`** (`asp-page="/Games/Leave"` `asp-route-id` in `Details.cshtml`; `@page "/games/{id:guid}/leave"` on `Leave.cshtml`).
 2. **`LeaveModel.OnPostAsync`** (`Pages/Games/Leave.cshtml.cs`): trim **`PlayerName`**; empty → **`TempData["LeaveNotice"]`** + redirect **`/g/{id}`**.
 3. Load all **`Participant`** rows for **`GameId`** into one tracked **`roster`** list.
-4. Match by **`GameId` + name** with **`StringComparison.OrdinalIgnoreCase`**. No match → **`TempData`** message + redirect (no exception).
+4. Match by **`GameId` + trimmed name** with **`StringComparison.OrdinalIgnoreCase`**. No match → **`TempData`** message + redirect (no exception).
 5. **If `Going`:** **`Remove`** that participant; among **`roster`** entries still **`Waitlist`**, pick **`OrderBy(CreatedAt)`, `ThenBy(Id)`** — first is promoted to **`Going`** (same **`SaveChangesAsync`**).
 6. **If `Waitlist`:** **`Remove`** only.
 7. **`TempData["LeaveNotice"]`** + redirect **`/g/{id}`** so lists refresh (PRG).
@@ -96,7 +105,7 @@ When the leaving player was **Waitlist**, only **delete** — **no** promotion (
 - **Join POST:** avoids tracked **`Game`** parent (insert **`Participant`** only).
 - **Leave POST:** one tracked **`roster`** list so promotion updates an instance EF is already tracking.
 - **Spots display:** details page now shows both **`GoingCount / MaxPlayers`** and friendly remaining label (`1 spot left`, `N spots left`).
-- **Name persistence + identity UX:** browser-only via **`localStorage["pickupGameManager.playerName"]`** and roster matching on details page.
+- **Name persistence + identity UX:** browser-only via **`localStorage["pickupGameManager.playerName"]`** and roster matching on details page; includes **Use different name** reset path.
 - **Duplicate joins:** UI-level prevention only in join handler; DB schema unchanged.
 - **Auth:** none.
 
