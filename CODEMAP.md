@@ -1,6 +1,6 @@
 # Code map — Pickup Game Manager
 
-Quick reference for navigating the repository. Behavior is described as implemented today (Days 1–5: create/view/join/leave; waitlist auto-promotion when a **Going** player leaves; UI-level duplicate-name prevention on join; localStorage name autofill/save; identity-lite UX refinements; mobile-first details layout polish).
+Quick reference for navigating the repository. Behavior is described as implemented today (Days 1–6: create/view/join/leave; waitlist auto-promotion when a **Going** player leaves; UI-level duplicate-name prevention on join; localStorage name autofill/save; identity-lite UX refinements; organizer invite-copy convenience; mobile-first details layout polish).
 
 ## Main folders and files
 
@@ -56,6 +56,10 @@ Quick reference for navigating the repository. Behavior is described as implemen
      - Blank name: **Join disabled**, **Leave disabled**.
    - Saves trimmed player name on blur/submit from join/leave forms; removes storage entry when name is cleared.
    - Scoped leave notice visibility to the current computed name (prevents stale notices for another typed identity).
+7. Share card in `Details.cshtml` includes two copy actions:
+   - **Copy** button for raw share URL (`/g/{id}`).
+   - **Copy Invite Message** button that builds a multi-line invite text with title, location, date/time, joined count, max players, and link.
+   - Uses `navigator.clipboard.writeText(...)` with a hidden `textarea` fallback and lightweight `Copied!` feedback text.
 
 ## Request flow: join a game
 
@@ -102,6 +106,7 @@ When the leaving player was **Waitlist**, only **delete** — **no** promotion (
 ## Important conventions
 
 - **Share URL:** **`/g/{gameId}`** for viewing/joining; **leave** uses **`/games/{id}/leave`** POST only from the details page form.
+- **Invite copy:** generated client-side from server-rendered values on details page; no backend API required.
 - **Join POST:** avoids tracked **`Game`** parent (insert **`Participant`** only).
 - **Leave POST:** one tracked **`roster`** list so promotion updates an instance EF is already tracking.
 - **Spots display:** details page now shows both **`GoingCount / MaxPlayers`** and friendly remaining label (`1 spot left`, `N spots left`).

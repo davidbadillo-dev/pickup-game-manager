@@ -6,6 +6,10 @@
     var spotsLeftLabel = Model.SpotsRemaining == 1 ? "1 spot left" : $"{Model.SpotsRemaining} spots left";
     var goingNamesJson = System.Text.Json.JsonSerializer.Serialize(Model.GoingPlayers.Select(p => p.Name));
     var waitlistNamesJson = System.Text.Json.JsonSerializer.Serialize(Model.WaitlistedPlayers.Select(p => p.Name));
+    var inviteTitleJson = System.Text.Json.JsonSerializer.Serialize(Model.Game.Title);
+    var inviteLocationJson = System.Text.Json.JsonSerializer.Serialize(Model.Game.Location);
+    var inviteWhenJson = System.Text.Json.JsonSerializer.Serialize(Model.Game.ScheduledAt.ToLocalTime().ToString("f"));
+    var inviteShareUrlJson = System.Text.Json.JsonSerializer.Serialize(shareUrl);
 }
 
 <div class="game-details-page">
@@ -130,11 +134,13 @@
     <div class="card mb-3">
         <div class="card-body">
             <h2 class="h6 card-title">Share this game</h2>
-            <p class="card-text small text-muted mb-2">Send players this link to open the game page.</p>
-            <div class="input-group">
+            <p class="card-text small text-muted mb-2">Copy the invite message for WhatsApp, Discord, SMS, or Messenger.</p>
+            <div class="input-group mb-2">
                 <input type="text" class="form-control font-monospace small" readonly value="@shareUrl" id="share-url" />
                 <button type="button" class="btn btn-outline-primary" id="copy-share">Copy</button>
             </div>
+            <button type="button" class="btn btn-primary btn-sm" id="copy-invite-message">Copy Invite Message</button>
+            <span class="small text-muted ms-2" id="copy-invite-feedback" aria-live="polite"></span>
         </div>
     </div>
 
@@ -157,6 +163,10 @@
         const leaveNotice = document.getElementById('leave-notice');
         const goingNames = @Html.Raw(goingNamesJson);
         const waitlistNames = @Html.Raw(waitlistNamesJson);
+        const inviteTitle = @Html.Raw(inviteTitleJson);
+        const inviteLocation = @Html.Raw(inviteLocationJson);
+        const inviteWhen = @Html.Raw(inviteWhenJson);
+        const inviteShareUrl = @Html.Raw(inviteShareUrlJson);
 
         const getSavedPlayerName = () => {
             try {
@@ -309,6 +319,52 @@
             } catch {
                 input.select();
                 document.execCommand('copy');
+            }
+        });
+
+        const buildInviteMessage = () => {
+            const lines = [
+                `⚽ ${inviteTitle}`,
+                `📍 ${inviteLocation}`,
+                `🕒 ${inviteWhen}`,
+                '',
+                `${goingNames.length} / @Model.Game.MaxPlayers players joined`,
+                '',
+                'Join here:',
+                inviteShareUrl,
+            ];
+            return lines.join('\n');
+        };
+
+        const copyInviteFeedback = document.getElementById('copy-invite-feedback');
+        const copyInviteButton = document.getElementById('copy-invite-message');
+        const showInviteFeedback = (text) => {
+            if (!copyInviteFeedback) return;
+            copyInviteFeedback.textContent = text;
+            setTimeout(() => {
+                if (copyInviteFeedback.textContent === text) {
+                    copyInviteFeedback.textContent = '';
+                }
+            }, 1800);
+        };
+
+        copyInviteButton?.addEventListener('click', async () => {
+            const inviteMessage = buildInviteMessage();
+            try {
+                await navigator.clipboard.writeText(inviteMessage);
+                showInviteFeedback('Copied!');
+                return;
+            } catch {
+                const fallback = document.createElement('textarea');
+                fallback.value = inviteMessage;
+                fallback.setAttribute('readonly', 'readonly');
+                fallback.style.position = 'absolute';
+                fallback.style.left = '-9999px';
+                document.body.appendChild(fallback);
+                fallback.select();
+                document.execCommand('copy');
+                document.body.removeChild(fallback);
+                showInviteFeedback('Copied!');
             }
         });
     </script>

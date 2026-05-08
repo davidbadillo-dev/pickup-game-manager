@@ -42,8 +42,8 @@
 
 ## Day 6 — Organizer Convenience
 
-- [ ] Add copy invite message button
-- [ ] Generate shareable message with game title, time, location, spots, and link
+- [x] Add copy invite message button
+- [x] Generate shareable message with game title, time, location, spots, and link
 - [ ] Optional: reminder helper text
 
 ## Day 7 — Polish + Deploy + Test
